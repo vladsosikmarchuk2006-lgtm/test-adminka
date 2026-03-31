@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hasov Test</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:radial-gradient(circle at top,#1a0033,#000);
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+}
+
+.box{
+width:100%;
+max-width:400px;
+background:rgba(20,0,40,0.9);
+padding:25px;
+border-radius:20px;
+box-shadow:0 0 40px rgba(150,0,255,0.5);
+text-align:center;
+}
+
+h2{color:#c084ff;}
+
+input{
+width:100%;
+padding:12px;
+margin:8px 0;
+border:none;
+border-radius:10px;
+background:#14002a;
+color:white;
+}
+
+button{
+width:100%;
+padding:14px;
+margin-top:10px;
+border:none;
+border-radius:12px;
+background:linear-gradient(45deg,#7b00ff,#b84dff);
+color:white;
+font-size:16px;
+cursor:pointer;
+}
+
+button:hover{opacity:0.8;}
+
+#q{margin:15px 0;font-size:18px;}
+.hidden{display:none;}
+.green{color:#00ff88;}
+.red{color:#ff4d4d;}
+
+textarea{
+width:100%;
+height:150px;
+margin-top:10px;
+background:#14002a;
+color:white;
+border:none;
+border-radius:10px;
+padding:10px;
+}
+</style>
+</head>
+<body>
+
+<div class="box" id="login">
+<h2>Вход</h2>
+<input id="nick" placeholder="Ник">
+<input id="vk" placeholder="VK">
+<input id="token" placeholder="Токен">
+<button onclick="login()">ВОЙТИ</button>
+</div>
+
+<div class="box hidden" id="test">
+<h2 id="timer"></h2>
+<div id="q"></div>
+<div id="answers"></div>
+<div id="res"></div>
+</div>
+
+<div class="box hidden" id="admin">
+<h2>ADMIN PANEL</h2>
+<input id="adminPass" placeholder="Пароль">
+<button onclick="adminLogin()">Войти</button>
+
+<div id="edit" class="hidden">
+<textarea id="editor"></textarea>
+<button onclick="save()">СОХРАНИТЬ</button>
+</div>
+</div>
+
+<script>
+
+// ===== ТОКЕНЫ =====
+const TOKENS = ["RICHAJD102JDKFN102","JWJSJX919LLLLL","91937382"];
+
+// ===== ВОПРОСЫ =====
+let bank = JSON.parse(localStorage.getItem("bank")) || [
+{q:"DM — это?",a:["Убийство без IC причины","РП дуэль","Случайный разговор"],c:0},
+{q:"MG означает:",a:["Использование OOC информации в IC","РП стиль","Игровой чат"],c:0},
+{q:"RK — это?",a:["Возврат к месту смерти для мести","РП восстановление","Телепорт персонажа"],c:0},
+{q:"SK — это?",a:["Убийство на спавне","РП зона","Игровой диалог"],c:0},
+{q:"TK — это?",a:["Убийство союзников","Убийство NPC","РП помощь"],c:0},
+{q:"PG — это?",a:["Нереалистичное поведение без страха","РП бой","Тактика"],c:0},
+{q:"NRP означает?",a:["Нарушение RP логики","РП поведение","Обычная игра"],c:0},
+{q:"IC информация?",a:["Информация внутри игры","Discord чат","Реальная жизнь"],c:0},
+{q:"OOC информация?",a:["Вне игрового мира","Игровой чат","РП информация"],c:0},
+{q:"FRP — это?",a:["Нарушение логики RP","Обычный бой","Чат"],c:0},
+{q:"FearRP означает?",a:["Игрок обязан бояться за жизнь","Игнор угроз","РП стиль"],c:0},
+{q:"PowerGaming — это?",a:["Нереальные действия без шансов","РП бой","Реализм"],c:0},
+{q:"Metagaming — это?",a:["Использование внешней информации","РП стиль","IC логика"],c:0},
+{q:"RP смерть?",a:["Полная потеря персонажа","Респавн","Возврат"],c:0},
+{q:"Злоупотребление RP?",a:["Нереалистичные действия","РП игра","Работа"],c:0},
+
+// НАКАЗАНИЯ
+{q:"Что будет за передачу аккаунта 3-му лицу?",a:["Перманентная блокировка","Блокировка 14 дней","Предупреждение"],c:0},
+{q:"Что будет за продажу / покупку аккаунта?",a:["Перманентная блокировка","Блокировка 30 дней","Деморган"],c:0},
+{q:"Что будет за использование более 3 аккаунтов?",a:["Блокировка всех аккаунтов на 14 дней","Перманентная блокировка","Предупреждение"],c:0},
+{q:"Что будет за махинации с валютой?",a:["Перманентная блокировка","Изъятие","Деморган"],c:0},
+{q:"Что будет за продажу за реальные деньги?",a:["Перманентная блокировка","30 дней","Мут"],c:0},
+{q:"Что будет за передачу имущества с аккаунта под баном?",a:["Изъятие + перманент","14 дней","Предупреждение"],c:0},
+{q:"Что будет за монополию бизнесов?",a:["14 дней + изъятие","30 дней","Предупреждение"],c:0},
+{q:"Что будет за использование промокодов на твинках?",a:["14 дней + изъятие","Предупреждение","Мут"],c:0},
+{q:"Что будет за игру на нескольких аккаунтах одновременно?",a:["14 дней","Перманент","Предупреждение"],c:0},
+{q:"Что будет за имущество на твинках?",a:["14-30 дней + изъятие","Предупреждение","Мут"],c:0},
+{q:"Что будет за передачу имущества бесплатно?",a:["14-30 дней + изъятие","Предупреждение","Мут"],c:0},
+{q:"Что будет за передачу имущества с твинка на основу?",a:["Перманент","30 дней","Предупреждение"],c:0},
+{q:"Что будет за DM без причины?",a:["30 минут деморган","40 минут","20 минут"],c:0},
+{q:"Что будет за массовый DM?",a:["60 минут деморган","30 минут","20 минут"],c:0},
+{q:"Что будет за DM в зеленой зоне?",a:["40 минут деморган","30 минут","20 минут"],c:0},
+{q:"Что будет за DB?",a:["30 минут деморган","20 минут","40 минут"],c:0},
+{q:"Что будет за SK?",a:["30 минут деморган","20 минут","40 минут"],c:0},
+{q:"Что будет за TK?",a:["30 минут деморган","20 минут","40 минут"],c:0},
+{q:"Что будет за PG?",a:["20 минут деморган","30 минут","40 минут"],c:0},
+{q:"Что будет за RK?",a:["20 минут деморган","30 минут","40 минут"],c:0},
+{q:"Что будет за NRP?",a:["30 минут деморган","варн","кик"],c:0},
+{q:"Что будет за MG?",a:["Мут 10 минут","варн","бан"],c:0},
+{q:"Что будет за уход от RP?",a:["Предупреждение","30 минут","бан"],c:0},
+{q:"Что будет за оскорбление родных?",a:["120 минут мут","варн","кик"],c:0},
+{q:"Что будет за флуд?",a:["10 минут мут","варн","кик"],c:0},
+{q:"Что будет за OOC оскорбление?",a:["30 минут мут","варн","кик"],c:0},
+{q:"Что будет за Caps?",a:["10 минут мут","варн","кик"],c:0},
+{q:"Что будет за транслит?",a:["10 минут мут","варн","кик"],c:0},
+{q:"Что будет за рекламу?",a:["60 минут мут","варн","кик"],c:0},
+{q:"Что будет за ввод в заблуждение?",a:["60-120 минут мут","варн","кик"],c:0},
+{q:"Что будет за помеху администрации?",a:["10 минут деморган","варн","мут"],c:0},
+{q:"Что будет за обман администрации?",a:["30 минут мут","варн","бан"],c:0},
+{q:"Что будет за читы?",a:["Перманент","30 дней","варн"],c:0},
+{q:"Что будет за распространение читов?",a:["Перманент","30 дней","варн"],c:0},
+{q:"Что будет за обман игроков?",a:["Перманент","30 дней","варн"],c:0},
+{q:"Что будет за угрозы в реальной жизни?",a:["Бан 30 дней","варн","мут"],c:0},
+{q:"Что будет за слив личной информации?",a:["Перманент","30 дней","варн"],c:0},
+{q:"Что будет за нац. оскорбления?",a:["60 минут мут","варн","кик"],c:0},
+{q:"Что будет за рекламу сторонних ресурсов?",a:["60 минут мут","варн","кик"],c:0}
+];
+
+// ===== ЛОГИКА =====
+let test=[],i=0,score=0,time=10,interval;
+
+function login(){
+let nick=document.getElementById("nick").value;
+let vk=document.getElementById("vk").value;
+let token=document.getElementById("token").value;
+
+if(!nick||!vk){alert("Заполни всё");return;}
+if(!TOKENS.includes(token)){alert("Неверный токен");return;}
+
+document.getElementById("login").classList.add("hidden");
+document.getElementById("test").classList.remove("hidden");
+
+start();
+}
+
+function start(){
+test=[...bank].sort(()=>0.5-Math.random()).slice(0,15);
+i=0;score=0;
+next();
+}
+
+function next(){
+if(i>=test.length){finish();return;}
+let q=test[i];
+document.getElementById("q").innerText=q.q;
+let box=document.getElementById("answers");
+box.innerHTML="";
+q.a.forEach(a=>{
+let b=document.createElement("button");
+b.innerText=a;
+b.onclick=()=>check(a,q);
+box.appendChild(b);
+});
+timer();
+}
+
+function timer(){
+clearInterval(interval);
+time=10;
+document.getElementById("timer").innerText="⏱ "+time;
+interval=setInterval(()=>{
+time--;
+document.getElementById("timer").innerText="⏱ "+time;
+if(time<=0){i++;next();}
+},1000);
+}
+
+function check(ans,q){
+clearInterval(interval);
+if(ans===q.a[q.c]) score++;
+i++;
+next();
+}
+
+function finish(){
+document.getElementById("q").innerText="Результат: "+score+"/15";
+document.getElementById("answers").innerHTML="";
+}
+
+// ===== ADMIN =====
+function adminLogin(){
+if(document.getElementById("adminPass").value==="admin7197"){
+document.getElementById("edit").classList.remove("hidden");
+document.getElementById("editor").value=JSON.stringify(bank,null,2);
+}
+}
+
+function save(){
+bank=JSON.parse(document.getElementById("editor").value);
+localStorage.setItem("bank",JSON.stringify(bank));
+alert("Сохранено");
+}
+
+</script>
+</body>
+</html>
